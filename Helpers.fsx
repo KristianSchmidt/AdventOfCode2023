@@ -17,7 +17,7 @@ let (|Regex|_|) pattern input =
 
 module Web =
     let getInput day =
-        let year = 2022
+        let year = 2023
         let path = __SOURCE_DIRECTORY__ + $@"\input\{day}.txt"
         if (not (FileInfo(path).Exists)) then
             let sessionCookie = Environment.GetEnvironmentVariable("ADVENT_OF_CODE_SESSION")
