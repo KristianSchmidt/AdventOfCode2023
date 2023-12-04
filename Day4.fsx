@@ -6,21 +6,19 @@ Environment.CurrentDirectory <- __SOURCE_DIRECTORY__
 
 let data = Helpers.Web.getInput 4
 
-let ans1 =
+let matches =
     data
     |> Array.map (fun s -> s.Substring(10).Split(" | ") |> Array.map (fun s -> s.Split(" ") |> Array.filter (String.IsNullOrEmpty >> not) |> Array.map int) |> Array.map Set.ofArray)
     |> Array.map (fun [|winners; mine|] -> Set.intersect winners mine |> Set.count)
+
+let ans1 =
+    matches
     |> Array.sumBy (fun i -> if i = 0 then 0. else 2. ** (float (i-1)))
     |> int
 
 ans1
 
 /// Part 2
-
-let matches =
-    data
-    |> Array.map (fun s -> s.Substring(10).Split(" | ") |> Array.map (fun s -> s.Split(" ") |> Array.filter (String.IsNullOrEmpty >> not) |> Array.map int) |> Array.map Set.ofArray)
-    |> Array.map (fun [|winners; mine|] -> Set.intersect winners mine |> Set.count)
 
 let counts = Array.init matches.Length (fun _ -> 1)
 
