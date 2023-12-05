@@ -37,7 +37,7 @@ ans1
 let seeds2 = data[0].Substring(7).Split(' ') |> Array.map int64 |> Array.chunkBySize 2
 
 let findMin [|start; range|] =
-    let incr = range / 1_000L
+    let incr = range / 750L
     let diffs = [|start ..incr.. (start+range)|] |> Array.map findLocation |> Array.pairwise |> Array.mapi (fun i (a,b) -> i, b - a)
     let pois = diffs |> Array.filter (snd >> ((<>) incr)) |> Array.map (fst >> int64)
     let pointsToCheck = Array.collect id [|
