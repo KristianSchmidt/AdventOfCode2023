@@ -9,18 +9,14 @@ let data =
     |> Array.map (fun s -> s.Split(' '))
     |> Array.map (fun [|c;bid|] -> c.ToCharArray(), int bid)
 
-let cardScore =
+let cardScore jValue =
     function
     | 'A' -> 14
     | 'K' -> 13
     | 'Q' -> 12
-    | 'J' -> 11
+    | 'J' -> jValue
     | 'T' -> 10
     | c -> int (string c)
-
-let test = [|'A'; 'A'; 'K'; '5'; '9'|]
-
-Array.countBy id test |> Array.sortByDescending snd
 
 let iskind count (arr : char array) =
     Array.countBy id arr
@@ -72,7 +68,7 @@ let compareHands hand1 hand2 =
     else
         let diff =
             Array.zip hand1 hand2
-            |> Array.map (fun (c1,c2) -> cardScore c1 - cardScore c2)
+            |> Array.map (fun (c1,c2) -> cardScore 11 c1 - cardScore 11 c2)
             |> Array.tryFind ((<>)0)
         match diff with
         | None -> 0
@@ -80,7 +76,7 @@ let compareHands hand1 hand2 =
 
 [<CustomComparison; CustomEquality>]
 type Hand =
-    { Cards : char array }
+    { Cards : char array; Comparer : (char array -> char array -> int) }
     interface IComparable with
         member this.CompareTo other =
             match other with
@@ -88,7 +84,7 @@ type Hand =
             | _ -> -1
 
     interface IComparable<Hand> with
-        member this.CompareTo other = compareHands this.Cards other.Cards
+        member this.CompareTo other = this.Comparer this.Cards other.Cards
 
     interface IEquatable<Hand> with
         member this.Equals other = other.Cards.Equals this.Cards
@@ -101,7 +97,7 @@ type Hand =
     
 let ans1 =
     data
-    |> Array.map (fun (c,r) -> { Cards = c }, r)
+    |> Array.map (fun (c,r) -> { Cards = c; Comparer = compareHands }, r)
     |> Array.sortBy fst
     |> Array.mapi (fun i (_,r) -> (i+1)*r)
     |> Array.sum
@@ -109,7 +105,37 @@ let ans1 =
 ans1
 
 /// Part 2
+let bestHandRank (arr : char array) =
+//    printfn "%A" arr
+    let cardsNonJ = arr |> Array.filter ((<>)'J') |> Array.distinct
+    if Array.isEmpty cardsNonJ then
+        6
+    else
+        cardsNonJ
+        |> Array.map (fun c -> arr |> Array.map (fun c' -> if c' = 'J' then c else c'))
+        |> Array.map handRank
+        |> Array.max
 
-let ans2 = data
+let compareHands2 hand1 hand2 =
+    let rank1, rank2 = bestHandRank hand1, bestHandRank hand2
+    if (rank1 > rank2) then
+        1
+    else if (rank2 > rank1) then
+        -1
+    else
+        let diff =
+            Array.zip hand1 hand2
+            |> Array.map (fun (c1,c2) -> cardScore 0 c1 - cardScore 0 c2)
+            |> Array.tryFind ((<>)0)
+        match diff with
+        | None -> 0
+        | Some x -> Math.Sign(x)
+
+let ans2 =
+    data
+    |> Array.map (fun (c,r) -> { Cards = c; Comparer = compareHands2 }, r)
+    |> Array.sortBy fst
+    |> Array.mapi (fun i (_,r) -> (i+1)*r)
+    |> Array.sum
 
 ans2
