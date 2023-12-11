@@ -6,9 +6,6 @@ Environment.CurrentDirectory <- __SOURCE_DIRECTORY__
 
 let data = array2D <| Helpers.Web.getInput 11
 
-let onlyDots (arr : char array) =
-    arr 
-
 let rows =
     [| 0 .. data.GetLength(0)-1 |]
     |> Array.filter (fun i -> data[i,*] |> Array.forall ((=)'.'))
@@ -16,7 +13,7 @@ let rows =
         
 let cols =
     [| 0 .. data.GetLength(1)-1 |]
-    |> Array.filter (fun i -> onlyDots <| data[*,i] |> Array.forall ((=)'.'))
+    |> Array.filter (fun i -> data[*,i] |> Array.forall ((=)'.'))
     |> set
 
 let pairs =
