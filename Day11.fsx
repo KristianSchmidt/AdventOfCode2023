@@ -38,7 +38,7 @@ let colsBetween c1 c2 =
 
 let rowsBetween r1 r2 =
     rows
-    |> Set.filter (fun c -> c > (min r1 r2) && c < (max r1 r2))
+    |> Set.filter (fun r -> r > (min r1 r2) && r < (max r1 r2))
     |> Set.count
 
 let findDist penalty ((r1,c1),(r2,c2)) =
