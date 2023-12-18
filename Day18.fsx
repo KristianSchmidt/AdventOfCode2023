@@ -59,7 +59,6 @@ let A =
     data
     |> Array.map (fun (l,c,_) -> (l,c))
     |> Array.scan nextPoint (0,0)
-    |> Array.distinct
     |> area
 
 let ans1 = A + b / 2L + 1L
@@ -84,7 +83,6 @@ let nextPoint2 (x,y) (count : int64,dir) =
 let A2 = 
     instructions
     |> Array.scan nextPoint2 (0L,0L)
-    |> Array.distinct
     |> area
 
 let b2 =
