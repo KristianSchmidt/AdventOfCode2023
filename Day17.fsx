@@ -5,109 +5,119 @@ open System.Collections.Generic
 
 Environment.CurrentDirectory <- __SOURCE_DIRECTORY__
 
-let data2 =
+let data =
     Helpers.Web.getInput 17
     |> Array.map (fun s -> s.ToCharArray() |> Array.map (string >> int))
-
-let data = """2413432311323
-3215453535623
-3255245654254
-3446585845452
-4546657867536
-1438598798454
-4457876987766
-3637877979653
-4654967986887
-4564679986453
-1224686865563
-2546548887735
-4322674655533""".Split('\n') |> Array.map (fun s -> s.ToCharArray() |> Array.map (string >> int))
-
-let data =
-    """2413432
-3215453""".Split('\n') |> Array.map (fun s -> s.ToCharArray() |> Array.map (string >> int))
-
-
+    
 let maxX, maxY = data.Length-1, data[0].Length-1
 
-let solve startPos (endX,endY) =
-    let calcPotential (x',y') = abs (endY-y') + abs (endX-x')
+type Pos = int*int*string
 
-    let s = new System.Diagnostics.Stopwatch()
-    s.Start()
-    
-    let frontier = PriorityQueue<int*int,int>()
+let addToDir (dir : string) (c : string) =
+    if dir.EndsWith(c) then
+        dir + c
+    else
+        c
+
+let getNeighbors (pos : Pos) =
+    let (x,y,dir) = pos
+    let r = (x,y+1, addToDir dir "R")
+    let l = (x,y-1, addToDir dir "L")
+    let u = (x-1,y, addToDir dir "U")
+    let d = (x+1,y, addToDir dir "D")
+    match dir with
+    | "UUU" | "DDD" -> [l; r]
+    | "RRR" | "LLL" -> [u; d]
+    | s when s.EndsWith("U") -> [u;l;r]
+    | s when s.EndsWith("D") -> [d;l;r]
+    | s when s.EndsWith("L") -> [u;d;l]
+    | s when s.EndsWith("R") -> [u;d;r]
+    | _ -> [u;d;r;l]
+    |> List.filter (fun (x,y,_) -> x >= 0 && x <= maxX && y >= 0 && y <= maxY)
+
+let solve startPos =
+    let frontier = PriorityQueue<Pos,int>()
     frontier.Enqueue(startPos, 0)
+    let mutable costSoFar : Map<Pos,int> = [(startPos,0)] |> Map.ofList
 
-    let mutable cameFrom : Map<int*int,int*int> = [startPos, (-1,-1)] |> Map.ofList
-    let mutable costSoFar : Map<int*int,int> = [(startPos, 0)] |> Map.ofList
-    let mutable result = -1
-
-    let getNeighbors pos =
-        let (x',y') = cameFrom[pos]
-        let (x,y) = pos
-        let regularNeighbors =
-            [
-                (x+1,y); (x-1,y); (x,y+1); (x,y-1)
-            ]
-            |> List.filter ((<>)(x',y')) // can't go back
-            |> List.filter (fun (x,y) -> x >= 0 && x <= maxX && y >= 0 && y <= maxY)
-        match Map.tryFind (x',y') cameFrom with
-        | Some (x'',y'') ->
-            match Map.tryFind (x'',y'') cameFrom with
-            | Some (x''',y''') ->
-                let dir1 = (x-x',y-y')
-                let dir2 = (x'-x'',y'-y'')
-                let dir3 = (x''-x''',y''-y''')
-                if (dir1 = dir2 && dir2 = dir3) then
-                    //printfn "hit it %A. (%i,%i) -> (%i,%i) -> (%i,%i) -> (%i,%i)" dir1 x''' y''' x'' y'' x' y' x y
-                    regularNeighbors
-                    |> List.filter ((<>)(x+x-x', y+y-y'))
-                else
-                    regularNeighbors
-            | None -> regularNeighbors
-        | None -> regularNeighbors
-
-    while (frontier.Count > 0) do
+    while frontier.Count > 0 do
         let current = frontier.Dequeue()
-        let (x,y) = current
-        printfn "Processing %A" current
-        let cost = costSoFar[current]
-        
-        if (x = endX && y = endY) then
-            printfn "Cost: %i" cost
-            result <- cost
+        let (x,y,_) = current
+
+        if x = maxX && y = maxY then
+            ()
         else
-            let neighbors = getNeighbors current
-            printfn "Neighbors of %A: %A" current neighbors
-            for n in neighbors do
-                let (x',y') = n
-                let new_cost = cost + data[x'][y']
-                if Map.containsKey n costSoFar then
-                    printfn "CurrentCost %i NewCost %i - CostSoFar %i" cost new_cost costSoFar[n]
-                if Map.containsKey n costSoFar |> not || new_cost < costSoFar[n] then
-                    costSoFar <- costSoFar |> Map.add n new_cost
-                    frontier.Enqueue(n, new_cost + calcPotential n)
-                    printfn "CameFrom %A = %A" n current
-                    cameFrom <- cameFrom |> Map.add n current
-                
-     
-    //printfn "%A -> %A examined %i nodes" startPos (endX, endY) i
-    cameFrom
+            for n in getNeighbors current do
+                let (x',y',_) = n
+                let newCost = costSoFar[current] + data[x'][y']
+                if costSoFar.ContainsKey(n) |> not || newCost < costSoFar[n] then
+                    costSoFar <- Map.add n newCost costSoFar
+                    frontier.Enqueue(n, newCost + abs (maxY-y') + abs (maxX-x'))
 
-let path = solve (0,0) (maxX,maxY)
+    costSoFar
 
-path[1,]
-
-
-// 733 too high
-
-let ans1 = data
+let ans1 =
+    solve (0,0,"")
+    |> Map.toList
+    |> List.filter (fun ((x,y,_),_) -> x = maxX && y = maxY)
+    |> List.minBy snd
+    |> snd
 
 ans1
 
 /// Part 2
 
-let ans2 = data
+let getNeighbors2 (pos : Pos) =
+    let (x,y,dir) = pos
+    let r = [4..10] |> List.map (fun i -> (x,y+i,"R"))
+    let l = [4..10] |> List.map (fun i -> (x,y-i,"L"))
+    let u = [4..10] |> List.map (fun i -> (x-i,y,"U"))
+    let d = [4..10] |> List.map (fun i -> (x+i,y,"D"))
+    match dir with
+    | "U" -> List.collect id [d;l;r]
+    | "D" -> List.collect id [u;l;r]
+    | "L" -> List.collect id [u;d;r]
+    | "R" -> List.collect id [u;d;l]
+    | _ -> List.collect id [u;d;r;l]
+    |> List.filter (fun (x,y,_) -> x >= 0 && x <= maxX && y >= 0 && y <= maxY)
+
+let getCost ((x,y,_) : Pos) ((x',y',_) : Pos) =
+    let mutable sum = 0
+    let minX,maxX = min x x', max x x'
+    let minY,maxY = min y y', max y y'
+    for i in minX .. maxX do
+        for j in minY .. maxY do
+            if ((x,y) <> (i,j)) then
+                sum <- sum + data[i][j]
+
+    sum
+
+let solve2 startPos =
+    let frontier = PriorityQueue<Pos,int>()
+    frontier.Enqueue(startPos, 0)
+    let mutable costSoFar : Map<Pos,int> = [(startPos,0)] |> Map.ofList
+
+    while frontier.Count > 0 do
+        let current = frontier.Dequeue()
+        let (x,y,_) = current
+
+        if x = maxX && y = maxY then
+            ()
+        else
+            for n in getNeighbors2 current do
+                let (x',y',_) = n
+                let newCost = costSoFar[current] + getCost current n
+                if costSoFar.ContainsKey(n) |> not || newCost < costSoFar[n] then
+                    costSoFar <- Map.add n newCost costSoFar
+                    frontier.Enqueue(n, newCost + abs (maxY-y') + abs (maxX-x'))
+
+    costSoFar
+
+let ans2 =
+    solve2 (0,0,"")
+    |> Map.toList
+    |> List.filter (fun ((x,y,_),_) -> x = maxX && y = maxY)
+    |> List.minBy snd
+    |> snd
 
 ans2
