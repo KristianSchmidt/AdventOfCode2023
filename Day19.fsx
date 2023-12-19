@@ -80,7 +80,7 @@ let parseWorkflow (s : string) =
 
 let wmap = workflows |> Array.map parseWorkflow |> Map.ofArray
 
-let parts2 = parts |> Array.map parsePart
+let parts' = parts |> Array.map parsePart
 
 let evaluatePart (p : Part) =
     let rec f w =
@@ -94,12 +94,69 @@ let evaluatePart (p : Part) =
 
 let score (p : Part) = p.X + p.M + p.A + p.S
 
-let ans1 = parts2 |> Array.filter (evaluatePart >> (=)"A") |> Array.sumBy score
+let ans1 = parts' |> Array.filter (evaluatePart >> (=)"A") |> Array.sumBy score
 
 ans1
 
 /// Part 2
 
-let ans2 = 0
+type PartSlice = { Xmin : int64; Xmax : int64; Mmin : int64; Mmax : int64; Amin : int64; Amax : int64; Smin : int64; Smax : int64 }
+
+let valid (p : PartSlice) = p.Xmin <= p.Xmax && p.Mmin <= p.Mmax && p.Amin <= p.Amax && p.Smin <= p.Smax
+
+type RuleEval2 =
+    | Goto of PartSlice * Destination
+    | Finished of PartSlice * string
+    | NoMatch of PartSlice
+
+let evalRule2 (r : Rule) (p : PartSlice) =
+    match r with
+    | Unconditional "A" -> [Finished (p, "A")]
+    | Unconditional "R" -> [Finished (p, "R")]
+    | Unconditional dest -> [Goto (p, dest)]
+    | GreaterThan (X, num, dest) -> [Goto({p with Xmin = (int64 num)+1L}, dest); NoMatch {p with Xmax = num}]
+    | GreaterThan (M, num, dest) -> [Goto({p with Mmin = (int64 num)+1L}, dest); NoMatch {p with Mmax = num}]
+    | GreaterThan (A, num, dest) -> [Goto({p with Amin = (int64 num)+1L}, dest); NoMatch {p with Amax = num}]
+    | GreaterThan (S, num, dest) -> [Goto({p with Smin = (int64 num)+1L}, dest); NoMatch {p with Smax = num}]
+    | LessThan (X, num, dest)    -> [Goto({p with Xmax = (int64 num)-1L}, dest); NoMatch {p with Xmin = num}]
+    | LessThan (M, num, dest)    -> [Goto({p with Mmax = (int64 num)-1L}, dest); NoMatch {p with Mmin = num}]
+    | LessThan (A, num, dest)    -> [Goto({p with Amax = (int64 num)-1L}, dest); NoMatch {p with Amin = num}]
+    | LessThan (S, num, dest)    -> [Goto({p with Smax = (int64 num)-1L}, dest); NoMatch {p with Smin = num}]
+
+let evalWorkflow2 (workflow : Workflow) (p : PartSlice) =
+    let rec f (w : Workflow) (ps : PartSlice list) =
+        match w with
+        | r :: rs -> 
+            let slices = ps |> List.collect (evalRule2 r)
+            let accepted =
+                slices
+                |> List.choose (function | Finished (ps, "A") -> Some ps | Goto(ps,"A") -> Some ps | _ -> None)
+                |> List.filter valid
+            
+            let gotos =
+                slices
+                |> List.filter (function | Goto(ps,dest) when dest <> "A" && dest <> "R" -> true | _ -> false)
+                |> List.collect (function | Goto(ps,dest) -> f wmap[dest] [ps])
+                |> List.filter valid
+                
+            let nomatches =
+                slices
+                |> List.filter (function | NoMatch ps -> true | _ -> false)
+                |> List.map (function | NoMatch ps -> ps)
+                |> List.filter valid
+                |> List.collect (fun ps -> f rs [ps])
+
+            List.collect id [accepted; gotos; nomatches]
+
+        | _ -> failwithf "."
+
+    f workflow [p]
+
+let baseSlice = { Xmin = 1L; Xmax = 4000L; Mmin = 1L; Mmax = 4000L; Amin = 1L; Amax = 4000L; Smin = 1L; Smax = 4000L }
+
+let sliceSize (ps : PartSlice) =
+    (ps.Xmax - ps.Xmin + 1L) * (ps.Mmax - ps.Mmin + 1L) * (ps.Amax - ps.Amin + 1L) * (ps.Smax - ps.Smin + 1L)
+
+let ans2 = evalWorkflow2 wmap["in"] baseSlice |> List.sumBy sliceSize
 
 ans2
