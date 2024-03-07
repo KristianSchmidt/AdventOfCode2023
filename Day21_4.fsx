@@ -81,14 +81,34 @@ let printMapped (map : Map<(int*int),int>) =
         printfn ""
 
 #time "on"
-let res = simulate start (65+131*6)
+let res = simulate start (65+131*1)
 
-// 1, 2, 4
-// 4, 6, 9
-// 9, 12, 16
-// 16, 20, 25
-// 25, 30, 36
-// 36, 42, 49
+// 1: 1, 2, 4
+// 2: 4, 6, 9
+// 3: 9, 12, 16
+// 4: 16, 20, 25
+// 5: 25, 30, 36
+// 6: 36, 42, 49
+
+// t_2: 2, 4, 6, 8, 10
+// t_3:    5, 7, 9, 11
+
+// t1_n = t3_n-1
+// t2_n = t2_n-1 + 2*n
+// t3_n = t3_n-1 + (2*n + 1)
+
+let calc (steps : int64) =
+    let hops = (steps - 65L) / 131L
+    printfn "Hops: %i" hops
+    let mutable t1 = 1L
+    let mutable t2 = 2L
+    let mutable t3 = 4L
+    for n in 2L .. hops do
+        t1 <- t3
+        t2 <- t2 + 2L * n
+        t3 <- t3 + 2L * n + 1L
+
+    (t1, t2, t3)
 
 let mapped = 
     res
@@ -96,6 +116,23 @@ let mapped =
     |> Array.countBy id
     |> Map.ofArray
 
+let [|(t1Count);(t2Count); (t3Count)|] =
+    res
+    |> Array.map mapToGrid
+    |> Array.countBy id
+    |> Array.countBy snd
+    |> Array.sortBy fst
+    |> Array.map (snd >> int64)
+
+//let (t1, t2, t3) = calc (65L + 131L*4L)
+
+let steps = 26501365L
+let (t1, t2, t3) = calc steps
+
+
+let final = t1 * t1Count + t2 * t2Count + t3 * t3Count
+
+simulate start (65 + 131*4) |> Array.length
 
 mapped |> Map.values |> Seq.distinct
 

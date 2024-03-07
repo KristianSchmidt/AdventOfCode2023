@@ -341,6 +341,7 @@ wholes * oneWhole + (2L*hops - 1L) * oneWhole + (simulate2 start 65 |> Array.len
 // diamond + 2 * hops - 1
 
 // 626322974728898 too high
+   625382480005896
 // 626078181216945 not correct
 // 626078181213049 not correct
 // 626078181209296 not correct
