@@ -39,6 +39,20 @@ let getNeighbors (r,c) =
     [| (r+1,c); (r-1,c); (r,c+1); (r,c-1) |]
     |> Array.filter (mapToGrid >> (fun (r,c) -> data.[r].[c] <> '#'))
 
+let isUnreachable (r,c) =
+    [| (r+1,c); (r-1,c); (r,c+1); (r,c-1) |]
+    |> Array.map mapToGrid
+    |> Array.forall (fun (r,c) -> data.[r].[c] = '#')
+
+let unreachables =
+    seq {
+        for r in 0..130 do
+            for c in 0..130 do 
+                if (isUnreachable (r,c)) then
+                    yield (r,c)
+    }
+    |> Set.ofSeq
+
 let start =
     let row = data |> Array.findIndex (fun arr -> arr |> Array.contains 'S')
     let col = data.[row] |> Array.findIndex ((=)'S')
@@ -55,6 +69,58 @@ let simulate start endStep =
     f [|start|] 0
 
 let ans1 = simulate start 64 |> Array.length
+
+let printMapped (map : Map<(int*int),int>) =
+    for i in 0 .. 130 do
+        for j in 0 .. 130 do
+            match Map.containsKey (i,j) map with
+            | true -> printf "%i" (map[(i,j)])
+            | false ->
+                printf "%c" data.[i].[j]
+                
+        printfn ""
+
+#time "on"
+let res = simulate start (65+131*6)
+
+// 1, 2, 4
+// 4, 6, 9
+// 9, 12, 16
+// 16, 20, 25
+// 25, 30, 36
+// 36, 42, 49
+
+let mapped = 
+    res
+    |> Array.map mapToGrid
+    |> Array.countBy id
+    |> Map.ofArray
+
+
+mapped |> Map.values |> Seq.distinct
+
+printMapped mapped
+
+
+let fullSquare =
+    simulate start 131
+    |> Array.filter (fun (r,c) -> r >= 0 && r <= 130 && c >= 0 && c <= 130)
+    |> Array.length
+    |> int64
+
+let steps = 26501365L
+
+let hops = (steps - 65L) / 131L
+let hInWholes = 2L*hops+1L
+
+hInWholes * fullSquare
+let wholes =
+    [|0L..hops-1L|]
+    |> Array.sumBy (fun i -> i*2L+1L)
+    |> (fun x -> x * 2L)
+
+wholes * fullSquare + (simulate start 65 |> Array.length |> int64)
+
 
 (*
 for i in 0 .. steps do
@@ -74,14 +140,17 @@ let calc i steps =
     let colMax = startC + (steps - i)
     (rowIdxUp, rowIdxDown), (colMin, colMax)
     
-calc 63 64
+calc 1 65
 
 let calcRow row colMin colMax steps =
-    let res =
+    let res' =
         [|colMin .. colMax|]
-        |> Seq.filter (fun c -> (row + c) % 2 = steps % 2 && data.[row].[c] <> '#')
-        |> Seq.length
-    printfn "Row %i = %i" row res
+        |> Seq.map (fun c -> mapToGrid (row,c))
+        |> Seq.filter (fun (r, c) -> (r + c) % 2 = steps % 2 && data.[r].[c] <> '#' && not (Set.contains (r,c) unreachables))
+    let res = res' |> Seq.length
+    //if (row = 14) then
+    //    printfn "Row %i = %i" row res
+    //    printfn "%A" (List.ofSeq res')
     res
 
 calcRow 1 65 65 64
@@ -100,12 +169,19 @@ let sumSteps steps =
     |> List.sum
 
 sumSteps 65
-simulate start 65 |> Array.length
+simulate start 65
+|> Array.filter (fst >> ((=)14))
+|> Array.map snd |> Array.sort
 
-for s in 1 .. 65 do
+data.[14].[57]
+
+let print2 s =
     let manual = simulate start s |> Array.length
     let auto = sumSteps s
     printfn "Step: %i - Manual: %i - Auto: %i" s manual auto
+
+print2 65
+print2 (65+131)
 
 let print n =
     let (x,y) = start
@@ -132,6 +208,8 @@ simulate start 65
 ans1
 
 // Part 2
+
+simulate start 65
 
 
 
