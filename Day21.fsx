@@ -21,12 +21,19 @@ let data = """...........
 
 let maxR, maxC = data.Length-1, data.[0].Length-1
 
-let isValid (r,c) = r >= 0 && r <= maxR && c >= 0 && c <= maxC
+let mapToGrid (r,c) =
+    let row =
+        let rest = r % data.Length
+        if (rest < 0) then data.Length + rest else rest
+    let col =
+        let rest = c % data.Length
+        if (rest < 0) then data.Length + rest else rest
+
+    (row, col)
 
 let getNeighbors (r,c) =
     [| (r+1,c); (r-1,c); (r,c+1); (r,c-1) |]
-    |> Array.filter isValid
-    |> Array.filter (fun (r,c) -> data.[r % maxR].[c % maxC] <> '#')
+    |> Array.filter (mapToGrid >> (fun (r,c) -> data.[r % maxR].[c % maxC] <> '#'))
 
 let start =
     let row = data |> Array.findIndex (fun arr -> arr |> Array.contains 'S')
@@ -63,40 +70,23 @@ ans1
 // t2_n = t2_n-1 + 2*n
 // t3_n = t3_n-1 + (2*n + 1)
 
-let mapToGrid (r,c) =
-    let row =
-        let rest = r % data.Length
-        if (rest < 0) then data.Length + rest else rest
-    let col =
-        let rest = c % data.Length
-        if (rest < 0) then data.Length + rest else rest
-
-    (row, col)
-
-let res = simulate start (65+131)
-
-let calc (steps : int64) =
-    let hops = (steps - 65L) / 131L
-    printfn "Hops: %i" hops
-    let mutable t1 = 1L
-    let mutable t2 = 2L
-    let mutable t3 = 4L
-    for n in 2L .. hops do
-        t1 <- t3
-        t2 <- t2 + 2L * n
-        t3 <- t3 + 2L * n + 1L
-
-    (t1, t2, t3)
-
-let [|(t1Count);(t2Count); (t3Count)|] =
-    res
+let [|t1Count; t2Count; t3Count|] =
+    simulate start (65+131)
     |> Array.map mapToGrid
     |> Array.countBy id
     |> Array.countBy snd
     |> Array.sortBy fst
     |> Array.map (snd >> int64)
 
+let calc (steps : int64) =
+    let hops = (steps - 65L) / 131L
+    
+    hops*hops,
+    hops * (hops + 1L),
+    (hops + 1L) * (hops + 1L)
+
 let steps = 26501365L
+calc steps
 let (t1, t2, t3) = calc steps
 
 let ans2 = t1 * t1Count + t2 * t2Count + t3 * t3Count
